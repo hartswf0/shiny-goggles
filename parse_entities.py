@@ -1,182 +1,251 @@
 #!/usr/bin/env python3
 
 import re
-from dataclasses import dataclass
-from typing import List, Optional, Dict
-from pathlib import Path
-
-@dataclass
-class Morphism:
-    name: str
-    actions: List[str]
-    
-@dataclass
-class Entity:
-    name: str
-    description: str
-    morphisms: List[Morphism]
-    children: List['Entity']
-    depth: int
+import json
+from typing import List, Dict, Any, Optional
 
 class EntityParser:
-    def __init__(self, content: str):
-        self.content = content
-        self.current_pos = 0
-        self.entities: Dict[str, Entity] = {}
+    @staticmethod
+    def clean_text(text: str) -> str:
+        """
+        Clean and normalize text
+        """
+        return re.sub(r'\s+', ' ', text).strip()
+
+    @staticmethod
+    def parse_hierarchical_text(text: str) -> List[Dict[str, Any]]:
+        """
+        Advanced hierarchical text parsing with comprehensive information capture
+        """
+        # Patterns for different levels of hierarchy
+        hierarchy_patterns = [
+            r'^(\s*├──|\s*└──)\s*\[([^\]]+)\](.*)$',  # Level 1 items
+            r'^(\s*│\s*├──|\s*│\s*└──)\s*\[([^\]]+)\](.*)$',  # Level 2 items
+            r'^(\s*│\s*│\s*├──|\s*│\s*│\s*└──)\s*\[([^\]]+)\](.*)$',  # Level 3 items
+        ]
         
-    def find_negative_space(self) -> List[tuple[int, int]]:
-        """Find blocks of whitespace that separate entities"""
-        spaces = []
-        lines = self.content.split('\n')
-        start = None
+        hierarchical_structure = []
+        current_levels = [hierarchical_structure]
         
-        for i, line in enumerate(lines):
-            if not line.strip():
-                if start is None:
-                    start = i
-            elif start is not None:
-                spaces.append((start, i))
-                start = None
-                
-        return spaces
-    
-    def extract_entity_blocks(self) -> List[str]:
-        """Extract entity blocks using negative space as separators"""
-        blocks = []
-        current_block = []
-        in_entity = False
-        entity_depth = 0
-        
-        for line in self.content.split('\n'):
-            stripped = line.strip()
-            if not stripped:
-                if current_block and entity_depth == 0:
-                    blocks.append('\n'.join(current_block))
-                    current_block = []
-                    in_entity = False
+        for line in text.split('\n'):
+            line = line.rstrip()
+            if not line:
                 continue
-                
-            # Track entity depth using tree characters
-            if '<Entity:' in line:
-                in_entity = True
-                entity_depth += 1
-            elif in_entity:
-                if '└──' in line and not any(x in line for x in ['<Entity:', '<Morphism:']):
-                    entity_depth = max(0, entity_depth - 1)
-                elif '├──' in line and '<Entity:' not in line:
-                    # Keep track of sibling entities
-                    pass
-                
-            if in_entity:
-                current_block.append(line)
-                
-        if current_block:
-            blocks.append('\n'.join(current_block))
             
-        return blocks
-
-    def parse_entity(self, block: str) -> Optional[Entity]:
-        """Parse a single entity block with improved tree structure handling"""
-        lines = block.split('\n')
-        # Handle both standard and tree-style entity headers with improved regex
-        entity_match = re.search(r'(?:[│├└](?:──)?\s*)?<Entity:\s*([^>]+)>|^[\s│]*(?:├──|└──)\s*<([^>]+)>', lines[0])
-        if not entity_match:
-            return None
-            
-        name = (entity_match.group(1) or entity_match.group(2)).strip()
-        description = ""
-        morphisms = []
-        children = []
-        
-        # Count leading spaces and tree characters for depth
-        depth = len(re.match(r'^[\s│├└─]*', lines[0]).group())
-        
-        current_morphism = None
-        in_description = False
-        
-        for line in lines[1:]:
-            if 'Description:' in line:
-                in_description = True
-                desc_match = re.search(r'Description:\s*"([^"]*)"', line)
-                if desc_match:
-                    description = desc_match.group(1)
-                else:
-                    description = line.split('Description:', 1)[1].strip().strip('"')
-            elif in_description and line.strip().startswith('"'):
-                # Handle multi-line descriptions
-                description += ' ' + line.strip().strip('"')
-            elif '<Morphism:' in line or re.search(r'[│├└](?:──)?\s*<Morphism:', line):
-                in_description = False
-                if current_morphism:
-                    morphisms.append(current_morphism)
-                morph_match = re.search(r'<Morphism:\s*([^>]+)>', line)
-                if morph_match:
-                    morph_name = morph_match.group(1)
-                    current_morphism = Morphism(morph_name, [])
-            elif current_morphism and re.search(r'[│├└](?:──)?\s*\[', line):
-                # Extract action text after tree formatting with improved regex
-                action_match = re.search(r'[│├└](?:──)?\s*\[(.*?)\]|[│├└](?:──)?\s*(.*?)$', line)
-                if action_match:
-                    action = action_match.group(1) or action_match.group(2)
-                    if action:
-                        current_morphism.actions.append(action.strip())
+            # Try to match each hierarchy level
+            matched = False
+            for pattern in hierarchy_patterns:
+                match = re.match(pattern, line)
+                if match:
+                    # Determine depth based on the prefix
+                    depth = len(re.findall(r'│', match.group(1)))
                     
-        if current_morphism:
-            morphisms.append(current_morphism)
-            
-        return Entity(name, description, morphisms, children, depth)
-
-    def build_entity_tree(self):
-        """Build hierarchical tree of entities"""
-        blocks = self.extract_entity_blocks()
-        entities = []
-        
-        for block in blocks:
-            entity = self.parse_entity(block)
-            if entity:
-                entities.append(entity)
-        
-        # Build hierarchy based on indentation depth
-        root_entities = []
-        stack = []
-        
-        for entity in entities:
-            while stack and stack[-1].depth >= entity.depth:
-                stack.pop()
-            
-            if stack:
-                stack[-1].children.append(entity)
-            else:
-                root_entities.append(entity)
-                
-            stack.append(entity)
-            
-        return root_entities
-    
-    def print_entity_tree(self, entities: List[Entity], level: int = 0):
-        """Print the entity tree in a readable format"""
-        for entity in entities:
-            indent = "  " * level
-            print(f"{indent}{'└──' if level > 0 else ''} Entity: {entity.name}")
-            if entity.description:
-                print(f"{indent}    Description: {entity.description}")
-            
-            for morphism in entity.morphisms:
-                print(f"{indent}    ├── Morphism: {morphism.name}")
-                for action in morphism.actions:
-                    print(f"{indent}    │   ├── {action}")
+                    # Extract key components
+                    marker = match.group(1).strip()
+                    action = match.group(2).strip()
+                    remaining_text = match.group(3).strip()
                     
-            if entity.children:
-                self.print_entity_tree(entity.children, level + 1)
+                    # Create comprehensive hierarchy item
+                    item = {
+                        'marker': marker,
+                        'action': action,
+                        'full_text': f'[{action}] {remaining_text}',
+                        'description': remaining_text,
+                        'website_relevant': bool(remaining_text),
+                        'children': []
+                    }
+                    
+                    # Ensure we have enough levels in our current_levels list
+                    while len(current_levels) <= depth:
+                        current_levels.append([])
+                    
+                    # Add to the appropriate level
+                    current_levels[depth].append(item)
+                    
+                    # If this is not the deepest level, add to parent's children
+                    if depth > 0:
+                        parent_level = current_levels[depth-1]
+                        if parent_level:
+                            parent_level[-1]['children'].append(item)
+                    
+                    matched = True
+                    break
+            
+            # If no match found, reset hierarchy
+            if not matched and line.strip():
+                current_levels = [hierarchical_structure]
+        
+        return hierarchical_structure
+
+    @staticmethod
+    def extract_website_routes(text: str) -> List[Dict[str, Any]]:
+        """
+        Extract comprehensive website route information
+        """
+        # Regex to capture route-like structures
+        route_pattern = re.compile(
+            r'\[([^\]]+)\]\s*(.+)?', 
+            re.MULTILINE
+        )
+        
+        routes = []
+        for match in route_pattern.finditer(text):
+            route_info = {
+                'route': match.group(1).strip(),
+                'description': match.group(2).strip() if match.group(2) else '',
+                'is_website_route': True
+            }
+            routes.append(route_info)
+        
+        return routes
+
+    @staticmethod
+    def parse_entities(file_path: str) -> Dict[str, Any]:
+        """
+        Advanced parsing of entities with comprehensive information capture
+        """
+        with open(file_path, 'r') as f:
+            content = f.read()
+        
+        # Comprehensive regex patterns
+        main_entity_pattern = re.compile(
+            r'#<Entity:\s*([^>]+)>\n\s*Description:\s*"([^"]+)"(.*?)(?=\n#<Entity:|\Z)', 
+            re.DOTALL
+        )
+        
+        sub_entity_pattern = re.compile(
+            r'<Entity:\s*([^>]+)>\n\s*Description:\s*"([^"]+)"(.*?)(?=\n<Entity:|\Z)', 
+            re.DOTALL
+        )
+        
+        morphism_pattern = re.compile(
+            r'<Morphism:\s*([^>]+)>\n((?:\s*├── \[.*?\]\n)*)', 
+            re.DOTALL
+        )
+        
+        nested_entity_pattern = re.compile(
+            r'<([^>]+):\s*([^>]+)>(?:\n\s*Description:\s*"([^"]*)")?([^<]*)', 
+            re.DOTALL
+        )
+        
+        action_pattern = re.compile(r'\[([^\]]+)\]')
+        
+        # Comprehensive parsing structure
+        parsed_document = {
+            'raw_text': content,
+            'document_structure': [],
+            'sitemap': {},
+            'website_routes': []
+        }
+        
+        # Extract website routes from entire document
+        parsed_document['website_routes'] = EntityParser.extract_website_routes(content)
+        
+        # Find all main entities
+        for main_match in main_entity_pattern.finditer(content):
+            main_entity = {
+                'type': 'main_entity',
+                'name': main_match.group(1).strip(),
+                'description': main_match.group(2).strip(),
+                'raw_text': main_match.group(0),
+                'sub_entities': [],
+                'hierarchical_details': []
+            }
+            
+            # Find ALL sub-entities within this main entity block
+            for sub_match in sub_entity_pattern.finditer(main_match.group(3)):
+                sub_entity = {
+                    'type': 'sub_entity',
+                    'name': sub_match.group(1).strip(),
+                    'description': sub_match.group(2).strip(),
+                    'raw_text': sub_match.group(0),
+                    'morphisms': [],
+                    'nested_entities': [],
+                    'website_routes': []
+                }
                 
+                # Find ALL morphisms for this sub-entity
+                for morph_match in morphism_pattern.finditer(sub_match.group(3)):
+                    morphism = {
+                        'type': 'morphism',
+                        'name': morph_match.group(1).strip(),
+                        'raw_text': morph_match.group(0),
+                        'actions': [
+                            action.strip() 
+                            for action in action_pattern.findall(morph_match.group(2))
+                        ],
+                        'hierarchical_details': EntityParser.parse_hierarchical_text(morph_match.group(2)),
+                        'website_routes': EntityParser.extract_website_routes(morph_match.group(2))
+                    }
+                    sub_entity['morphisms'].append(morphism)
+                
+                # Extract website routes for this sub-entity
+                sub_entity['website_routes'] = EntityParser.extract_website_routes(sub_match.group(3))
+                
+                # Find ALL nested entities within this sub-entity
+                for nested_match in nested_entity_pattern.finditer(sub_match.group(3)):
+                    nested_entity = {
+                        'type': nested_match.group(1).strip(),
+                        'name': nested_match.group(2).strip(),
+                        'description': (nested_match.group(3) or '').strip(),
+                        'raw_text': nested_match.group(0),
+                        'morphisms': [],
+                        'actions': [],
+                        'website_routes': []
+                    }
+                    
+                    # Find morphisms for nested entity
+                    nested_context = nested_match.group(4)
+                    for nested_morph_match in morphism_pattern.finditer(nested_context):
+                        nested_morphism = {
+                            'type': 'nested_morphism',
+                            'name': nested_morph_match.group(1).strip(),
+                            'raw_text': nested_morph_match.group(0),
+                            'actions': [
+                                action.strip() 
+                                for action in action_pattern.findall(nested_morph_match.group(2))
+                            ],
+                            'hierarchical_details': EntityParser.parse_hierarchical_text(nested_morph_match.group(2)),
+                            'website_routes': EntityParser.extract_website_routes(nested_morph_match.group(2))
+                        }
+                        nested_entity['morphisms'].append(nested_morphism)
+                    
+                    # Find direct actions in nested entity
+                    nested_entity['actions'] = [
+                        action.strip() 
+                        for action in action_pattern.findall(nested_context)
+                    ]
+                    
+                    # Extract website routes for nested entity
+                    nested_entity['website_routes'] = EntityParser.extract_website_routes(nested_context)
+                    
+                    sub_entity['nested_entities'].append(nested_entity)
+                
+                main_entity['sub_entities'].append(sub_entity)
+            
+            # Create sitemap entry
+            parsed_document['sitemap'][main_entity['name']] = {
+                'description': main_entity['description'],
+                'sub_pages': [sub['name'] for sub in main_entity['sub_entities']],
+                'website_routes': EntityParser.extract_website_routes(main_match.group(0))
+            }
+            
+            parsed_document['document_structure'].append(main_entity)
+        
+        return parsed_document
+
 def main():
-    input_file = Path("/Users/gaia/shiny-googles_S_BLU/shiny-goggles/index.html")
-    with open(input_file, 'r') as f:
-        content = f.read()
-        
-    parser = EntityParser(content)
-    root_entities = parser.build_entity_tree()
-    parser.print_entity_tree(root_entities)
+    input_file = '/Users/gaia/shiny-googles_S_BLU/shiny-goggles/index.html'
+    output_file = '/Users/gaia/shiny-googles_S_BLU/shiny-goggles/parsed_entities.json'
     
-if __name__ == "__main__":
+    # Parse entities
+    parsed_entities = EntityParser.parse_entities(input_file)
+    
+    # Save to JSON
+    with open(output_file, 'w') as f:
+        json.dump(parsed_entities, f, indent=2)
+    
+    print(f"Parsed document structure saved to {output_file}")
+
+if __name__ == '__main__':
     main()

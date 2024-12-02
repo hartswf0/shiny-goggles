@@ -2,205 +2,262 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xanadu-Style Document Explorer</title>
+    <title>Xanadu Hypertext Explorer</title>
     <style>
         :root {
-            --bg-color: #0a0a0f;
-            --text-color: #e0e0e0;
-            --entity-color: #4a9eff;
-            --morphism-color: #ff6b6b;
-            --description-color: #50fa7b;
-            --link-color: #bd93f9;
+            --bg-primary: #0a0a1a;
+            --text-primary: #e0e0ff;
+            --highlight-color: #4a90e2;
+            --link-color: #7ed6df;
+            --border-color: #2c3e50;
         }
 
-        body {
-            background: var(--bg-color);
-            color: var(--text-color);
-            font-family: 'Monaco', 'Consolas', monospace;
-            line-height: 1.6;
+        * {
+            box-sizing: border-box;
             margin: 0;
-            padding: 20px;
-        }
-
-        .entity {
-            border-left: 2px solid var(--entity-color);
-            margin: 10px 0;
-            padding-left: 15px;
+            padding: 0;
             transition: all 0.3s ease;
         }
 
-        .entity:hover {
-            transform: translateX(5px);
-            background: rgba(74, 158, 255, 0.1);
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-        .entity-header {
-            color: var(--entity-color);
-            font-weight: bold;
-            cursor: pointer;
+        .hypertext-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            background-color: rgba(0,0,0,0.7);
+            border-radius: 15px;
+            padding: 20px;
+            border: 2px solid var(--border-color);
         }
 
-        .description {
-            color: var(--description-color);
-            font-style: italic;
-            margin: 5px 0;
-        }
-
-        .morphism {
-            color: var(--morphism-color);
-            margin-left: 20px;
-        }
-
-        .content {
-            margin-left: 20px;
-            display: none;
-        }
-
-        .visible {
-            display: block;
-        }
-
-        .tree-line {
-            color: var(--text-color);
-            opacity: 0.5;
-        }
-
-        .hawaiian-term {
-            color: var(--link-color);
-            font-style: italic;
-            cursor: help;
-        }
-
-        #floating-info {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.8);
+        .navigation {
+            background-color: rgba(20,20,50,0.8);
+            border-radius: 10px;
             padding: 15px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .content-area {
+            background-color: rgba(30,30,60,0.8);
+            border-radius: 10px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 80vh;
+        }
+
+        .nav-item {
+            cursor: pointer;
+            padding: 10px;
+            margin: 5px 0;
             border-radius: 5px;
-            display: none;
-            max-width: 300px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            background-color: rgba(50,50,100,0.5);
+            transition: background-color 0.3s ease;
+        }
+
+        .nav-item:hover {
+            background-color: var(--highlight-color);
+        }
+
+        .nav-item.active {
+            background-color: var(--link-color);
+            color: var(--bg-primary);
+        }
+
+        .entity-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 4px solid var(--highlight-color);
+        }
+
+        .route-item {
+            background-color: rgba(70,70,120,0.5);
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .hierarchical-tree {
+            margin-left: 20px;
+            border-left: 2px solid var(--link-color);
+            padding-left: 10px;
+        }
+
+        #searchInput {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            background-color: rgba(50,50,100,0.5);
+            border: none;
+            color: var(--text-primary);
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <div id="root"></div>
-    <div id="floating-info"></div>
+    <div class="hypertext-container">
+        <div class="navigation">
+            <input type="text" id="searchInput" placeholder="🔍 Search entities...">
+            <div id="entityNavigation"></div>
+        </div>
+        <div class="content-area" id="contentArea">
+            <h1>Xanadu Hypertext Explorer</h1>
+            <p>Navigate through the intricate web of entities and their relationships.</p>
+        </div>
+    </div>
 
     <script>
-        const data = {
-            entities: [
-                {
-                    name: "S_BLU_00",
-                    description: "Analysis of Marshall Sahlins' Account of Captain Cook's Death",
-                    morphisms: [
-                        {
-                            name: "Specifies",
-                            items: [
-                                "identifies source as 'How natives think'",
-                                "attributes authorship to Marshall Sahlins",
-                                "notes publication year as 1995"
-                            ]
-                        }
-                    ]
-                },
-                {
-                    name: "Cultural_Symbolism",
-                    description: "Hawaiian cosmology and symbolic interpretations",
-                    morphisms: [
-                        {
-                            name: "Highlights",
-                            items: [
-                                "links Cook's arrival with Makahiki festival",
-                                "examines symbolic meanings",
-                                "explores sacrificial practices",
-                                "emphasizes Hawaiian cultural logic"
-                            ]
-                        }
-                    ]
-                }
-                // More entities can be added here
-            ],
-            hawaiianTerms: {
-                "heiau": "Traditional Hawaiian temple or sacred site",
-                "kapu": "Sacred law or prohibition in Hawaiian culture",
-                "alii": "Hawaiian chiefs or nobles",
-                "Makahiki": "Annual harvest festival and period of peace"
-            }
-        };
+        // Load and parse the JSON file
+        async function loadEntityData() {
+            const response = await fetch('parsed_entities.json');
+            return await response.json();
+        }
 
-        function createEntityElement(entity) {
-            const div = document.createElement('div');
-            div.className = 'entity';
-            
-            const header = document.createElement('div');
-            header.className = 'entity-header';
-            header.textContent = `<Entity: ${entity.name}>`;
-            header.onclick = () => toggleContent(header.nextElementSibling);
-            
-            const content = document.createElement('div');
-            content.className = 'content';
-            
-            const description = document.createElement('div');
-            description.className = 'description';
-            description.textContent = entity.description;
-            
-            content.appendChild(description);
-            
-            if (entity.morphisms) {
-                entity.morphisms.forEach(morphism => {
-                    const morphismDiv = document.createElement('div');
-                    morphismDiv.className = 'morphism';
-                    morphismDiv.innerHTML = `<span class="tree-line">├── </span><Morphism: ${morphism.name}>`;
-                    
-                    morphism.items.forEach((item, index) => {
-                        const itemDiv = document.createElement('div');
-                        itemDiv.innerHTML = `<span class="tree-line">${
-                            index === morphism.items.length - 1 ? '└── ' : '├── '
-                        }</span>${item}`;
-                        morphismDiv.appendChild(itemDiv);
-                    });
-                    
-                    content.appendChild(morphismDiv);
+        // Render navigation items
+        function renderNavigation(entityData) {
+            const navContainer = document.getElementById('entityNavigation');
+            navContainer.innerHTML = ''; // Clear existing navigation
+
+            // Flatten and extract all entities
+            const allEntities = [
+                ...entityData.document_structure.map(main => ({
+                    type: 'main_entity',
+                    name: main.name,
+                    description: main.description
+                })),
+                ...entityData.document_structure.flatMap(main => 
+                    main.sub_entities.map(sub => ({
+                        type: 'sub_entity',
+                        name: sub.name,
+                        description: sub.description,
+                        parent: main.name
+                    }))
+                )
+            ];
+
+            // Render navigation items
+            allEntities.forEach(entity => {
+                const navItem = document.createElement('div');
+                navItem.classList.add('nav-item');
+                navItem.innerHTML = `
+                    <strong>${entity.name}</strong>
+                    <small>${entity.type}</small>
+                `;
+                navItem.addEventListener('click', () => renderEntityDetails(entity, entityData));
+                navContainer.appendChild(navItem);
+            });
+
+            // Search functionality
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                navContainer.querySelectorAll('.nav-item').forEach(item => {
+                    const isVisible = item.textContent.toLowerCase().includes(searchTerm);
+                    item.style.display = isVisible ? 'block' : 'none';
                 });
+            });
+        }
+
+        // Render detailed view of an entity
+        function renderEntityDetails(entity, entityData) {
+            const contentArea = document.getElementById('contentArea');
+            contentArea.innerHTML = `
+                <div class="entity-section">
+                    <h2>${entity.name}</h2>
+                    <p><em>${entity.type}</em></p>
+                    <p>${entity.description}</p>
+                </div>
+            `;
+
+            // Render website routes
+            if (entityData.website_routes && entityData.website_routes.length) {
+                const routesSection = document.createElement('div');
+                routesSection.innerHTML = '<h3>Website Routes</h3>';
+                
+                entityData.website_routes.forEach(route => {
+                    const routeItem = document.createElement('div');
+                    routeItem.classList.add('route-item');
+                    routeItem.innerHTML = `
+                        <strong>[${route.route}]</strong>
+                        <p>${route.description}</p>
+                    `;
+                    routesSection.appendChild(routeItem);
+                });
+                
+                contentArea.appendChild(routesSection);
             }
-            
-            div.appendChild(header);
-            div.appendChild(content);
-            return div;
+
+            // Render hierarchical details if available
+            function renderHierarchicalTree(details, container) {
+                if (!details || !details.length) return;
+
+                const treeContainer = document.createElement('div');
+                treeContainer.classList.add('hierarchical-tree');
+                
+                details.forEach(item => {
+                    const itemElement = document.createElement('div');
+                    itemElement.innerHTML = `
+                        <strong>[${item.action}]</strong>
+                        <p>${item.description}</p>
+                    `;
+                    
+                    if (item.children && item.children.length) {
+                        renderHierarchicalTree(item.children, itemElement);
+                    }
+                    
+                    treeContainer.appendChild(itemElement);
+                });
+                
+                container.appendChild(treeContainer);
+            }
+
+            // Add any additional context from document structure
+            const mainEntity = entityData.document_structure.find(main => 
+                main.name === entity.name || 
+                main.sub_entities.some(sub => sub.name === entity.name)
+            );
+
+            if (mainEntity) {
+                const morphismsSection = document.createElement('div');
+                morphismsSection.innerHTML = '<h3>Morphisms and Hierarchical Details</h3>';
+                
+                mainEntity.sub_entities.forEach(sub => {
+                    if (sub.name === entity.name) {
+                        sub.morphisms.forEach(morphism => {
+                            const morphismItem = document.createElement('div');
+                            morphismItem.classList.add('entity-section');
+                            morphismItem.innerHTML = `
+                                <strong>${morphism.name}</strong>
+                                <p>Actions: ${morphism.actions.join(', ')}</p>
+                            `;
+                            
+                            renderHierarchicalTree(morphism.hierarchical_details, morphismItem);
+                            morphismsSection.appendChild(morphismItem);
+                        });
+                    }
+                });
+                
+                contentArea.appendChild(morphismsSection);
+            }
         }
 
-        function toggleContent(element) {
-            element.classList.toggle('visible');
+        // Initialize the application
+        async function initXanaduExplorer() {
+            const entityData = await loadEntityData();
+            renderNavigation(entityData);
         }
 
-        function showFloatingInfo(term) {
-            const info = document.getElementById('floating-info');
-            info.textContent = data.hawaiianTerms[term];
-            info.style.display = 'block';
-        }
-
-        function hideFloatingInfo() {
-            const info = document.getElementById('floating-info');
-            info.style.display = 'none';
-        }
-
-        function initializeDocument() {
-            const root = document.getElementById('root');
-            data.entities.forEach(entity => {
-                root.appendChild(createEntityElement(entity));
-            });
-
-            // Add Hawaiian term tooltips
-            document.querySelectorAll('.hawaiian-term').forEach(term => {
-                term.addEventListener('mouseenter', () => showFloatingInfo(term.dataset.term));
-                term.addEventListener('mouseleave', hideFloatingInfo);
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', initializeDocument);
+        // Start the application when the page loads
+        window.addEventListener('DOMContentLoaded', initXanaduExplorer);
     </script>
 </body>
 </html>

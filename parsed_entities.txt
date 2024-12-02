@@ -1,0 +1,118 @@
+# Parsed Entities from index.html
+
+## S_BLU_00_Analysis of Marshall Sahlins Account of How Natives Think About Captain Cook
+
+### Source Identification
+- Identifies source: "How "natives" think: about Captain Cook, for example" by Marshall Sahlins
+- Attributes authorship to Marshall Sahlins, renowned anthropologist
+- Publication year: 1995
+
+### Key Entities and Their Descriptions
+
+1. Contextualization
+   - Framework for interpreting the source
+   - Highlights Sahlins' anthropological perspective
+   - Critiques Western-centric interpretations of Hawaiian actions
+
+2. Key Details about Captain Cook's Death
+   - Arrival during Makahiki festival dedicated to Lono
+   - Hawaiians initially offered veneration similar to a deity
+   - Tensions between chiefs and priests
+   - Transformation of Cook's status from veneration to hostility
+   - Ritualistic distribution of Cook's body parts among chiefs
+
+3. Cultural Symbolism
+   - Cook's arrival linked to Hawaiian Makahiki festival
+   - Symbolic meanings attributed by different social groups
+   - Sacrificial practices integrating Cook into Hawaiian cosmological order
+
+4. Anthropological Analysis
+   - Argues against reducing Hawaiian actions to Western rationality
+   - Emphasizes understanding actions within Hawaiian cultural frameworks
+   - Focuses on symbolic and ritual dimensions
+
+5. Interpretations of Cook
+   - Presented as Lono within the Makahiki context
+   - Shifting perceptions due to potential cultural violations
+   - Sacrificial death framed within Hawaiian ritual logic
+
+### Probabilistic Model Insights
+
+1. Cultural Action Vectors
+   - Practical Motivation: Goal-oriented, utilitarian actions
+   - Symbolic Motivation: Actions driven by cultural beliefs
+   - Individual Agency: Autonomy in decision-making
+   - Collective Meaning: Alignment with group norms
+
+2. Rapid Inference Model
+   - Formula: P(action|culture) = f(P,S,I,C)
+   - Trained on scores for Practical, Symbolic, Individual, and Collective factors
+
+## S_BLU_02: Symbolic Meanings and Ritualistic Influence
+
+### Symbolic Meanings
+- Cook connected to Lono through Makahiki festival
+- European ships interpreted as sacred temples
+- Ritualistic significance of gift exchanges
+- Transformation of Cook's status
+
+### Ritualistic Influence
+- Makahiki festival as interpretive lens
+- Specific rituals like *hanaipii* ceremony
+- Hawaiian concepts of divinity (*kinolau*)
+- Rituals as deeply meaningful cultural expressions
+
+### Structural Relationships
+- Differing perspectives among social groups
+- Variations between chiefs, priests, and commoners
+- Rejection of simplified interpretations
+
+## S_BLU_03: Probabilistic Model for Cultural Actions
+
+### Cultural Action Vectors
+- Practical Motivation
+- Symbolic Motivation
+- Individual Agency
+- Collective Meaning
+
+### Model Characteristics
+- Probabilistic framework for predicting cultural actions
+- Uses multidimensional scoring
+- Integrates cultural context and individual variations
+
+## Additional Key Insights
+
+1. Belief Systems
+   - Hierarchical structure central to governance
+   - Concept of *waiakua* ("godly blood") for high-ranking chiefs
+
+2. Strategic Behaviors
+   - Leveraging European interactions
+   - Managing foreign influence
+   - Balancing cultural preservation with external pressures
+
+3. Environmental and Geographical Factors
+   - Adapting to environmental hazards
+   - Navigating cultural differences
+   - Strategic resource management
+
+### Methodological Approaches
+- Integrating oral histories
+- Accounting for power dynamics
+- Emphasizing cultural context in interpretation
+
+### Model Enhancements
+- Incorporating Makahiki and Ku transitions
+- Evaluating oral history complexities
+- Modeling symbolic and practical action interdependence
+
+### Limitations and Considerations
+- Gaps in historical records
+- Need for corroboration with multiple sources
+- Complexity of cross-cultural interactions
+
+## Conclusion
+A sophisticated probabilistic model that:
+- Respects cultural specificity
+- Accounts for symbolic and practical motivations
+- Provides nuanced understanding of Hawaiian-European interactions

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Entity Map Viewer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        #controls {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+
+        #entity-container {
+            margin-top: 70px;
+            padding: 1rem;
+        }
+
+        #debug-output {
+            background: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 1rem;
+            margin-top: 1rem;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .error {
+            color: red;
+            background: #fff0f0;
+            border: 1px solid #ffd0d0;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <button onclick="loadEntityMap()">Load Entity Map</button>
+        <button onclick="toggleDebug()">Toggle Debug</button>
+    </div>
+    <div id="entity-container">
+        <div class="loading">Click 'Load Entity Map' to begin</div>
+    </div>
+    <div id="debug-output" style="display:none;"></div>
+
+    <script src="entity_parser.js"></script>
+    <script>
+        const entityContainer = document.getElementById('entity-container');
+        const debugOutput = document.getElementById('debug-output');
+        const renderer = new EntityRenderer();
+
+        function log(message) {
+            console.log(message);
+            debugOutput.textContent += message + '\n';
+        }
+
+        function toggleDebug() {
+            debugOutput.style.display = 
+                debugOutput.style.display === 'none' ? 'block' : 'none';
+        }
+
+        async function loadEntityMap() {
+            // Reset containers
+            entityContainer.innerHTML = '<div class="loading">Loading...</div>';
+            debugOutput.textContent = '';
+
+            try {
+                log('Starting entity map load...');
+
+                // Fetch the index.html file
+                const response = await fetch('index.html');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                // Read content
+                const content = await response.text();
+                log(`Content length: ${content.length} characters`);
+
+                // Log first 500 characters for initial inspection
+                log('First 500 characters:\n' + content.substring(0, 500));
+
+                // Try to extract blocks
+                log('Extracting blocks...');
+                const blocks = renderer.extractBlocks(content);
+                log(`Found ${blocks.length} blocks`);
+
+                // If no blocks found, show error
+                if (blocks.length === 0) {
+                    throw new Error('No entity blocks found in the document');
+                }
+
+                // Log first block details
+                log('\nFirst Block Preview:\n' + blocks[0].substring(0, 500));
+
+                // Try to parse first block
+                log('\nParsing first block...');
+                const firstEntity = renderer.parseEntityBlock(blocks[0]);
+                log('First Entity Structure:\n' + JSON.stringify(firstEntity, null, 2));
+
+                // Render all blocks
+                log('\nRendering entities...');
+                renderer.render(content, entityContainer);
+                log('Rendering complete');
+
+            } catch (error) {
+                console.error('Error:', error);
+                
+                // Display error in both console and UI
+                const errorMessage = `
+Error Loading Entity Map:
+${error.message}
+
+Stack Trace:
+${error.stack}
+`;
+                log(errorMessage);
+                
+                // Show error in the container
+                entityContainer.innerHTML = `
+                    <div class="error">
+                        <h2>Error Loading Entity Map</h2>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Automatically attempt to load on page load
+        window.addEventListener('DOMContentLoaded', loadEntityMap);
+    </script>
+</body>
+</html>
