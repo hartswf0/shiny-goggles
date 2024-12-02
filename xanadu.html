@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xanadu-Style Document Explorer</title>
+    <style>
+        :root {
+            --bg-color: #0a0a0f;
+            --text-color: #e0e0e0;
+            --entity-color: #4a9eff;
+            --morphism-color: #ff6b6b;
+            --description-color: #50fa7b;
+            --link-color: #bd93f9;
+        }
+
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Monaco', 'Consolas', monospace;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .entity {
+            border-left: 2px solid var(--entity-color);
+            margin: 10px 0;
+            padding-left: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .entity:hover {
+            transform: translateX(5px);
+            background: rgba(74, 158, 255, 0.1);
+        }
+
+        .entity-header {
+            color: var(--entity-color);
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .description {
+            color: var(--description-color);
+            font-style: italic;
+            margin: 5px 0;
+        }
+
+        .morphism {
+            color: var(--morphism-color);
+            margin-left: 20px;
+        }
+
+        .content {
+            margin-left: 20px;
+            display: none;
+        }
+
+        .visible {
+            display: block;
+        }
+
+        .tree-line {
+            color: var(--text-color);
+            opacity: 0.5;
+        }
+
+        .hawaiian-term {
+            color: var(--link-color);
+            font-style: italic;
+            cursor: help;
+        }
+
+        #floating-info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            max-width: 300px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="floating-info"></div>
+
+    <script>
+        const data = {
+            entities: [
+                {
+                    name: "S_BLU_00",
+                    description: "Analysis of Marshall Sahlins' Account of Captain Cook's Death",
+                    morphisms: [
+                        {
+                            name: "Specifies",
+                            items: [
+                                "identifies source as 'How natives think'",
+                                "attributes authorship to Marshall Sahlins",
+                                "notes publication year as 1995"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    name: "Cultural_Symbolism",
+                    description: "Hawaiian cosmology and symbolic interpretations",
+                    morphisms: [
+                        {
+                            name: "Highlights",
+                            items: [
+                                "links Cook's arrival with Makahiki festival",
+                                "examines symbolic meanings",
+                                "explores sacrificial practices",
+                                "emphasizes Hawaiian cultural logic"
+                            ]
+                        }
+                    ]
+                }
+                // More entities can be added here
+            ],
+            hawaiianTerms: {
+                "heiau": "Traditional Hawaiian temple or sacred site",
+                "kapu": "Sacred law or prohibition in Hawaiian culture",
+                "alii": "Hawaiian chiefs or nobles",
+                "Makahiki": "Annual harvest festival and period of peace"
+            }
+        };
+
+        function createEntityElement(entity) {
+            const div = document.createElement('div');
+            div.className = 'entity';
+            
+            const header = document.createElement('div');
+            header.className = 'entity-header';
+            header.textContent = `<Entity: ${entity.name}>`;
+            header.onclick = () => toggleContent(header.nextElementSibling);
+            
+            const content = document.createElement('div');
+            content.className = 'content';
+            
+            const description = document.createElement('div');
+            description.className = 'description';
+            description.textContent = entity.description;
+            
+            content.appendChild(description);
+            
+            if (entity.morphisms) {
+                entity.morphisms.forEach(morphism => {
+                    const morphismDiv = document.createElement('div');
+                    morphismDiv.className = 'morphism';
+                    morphismDiv.innerHTML = `<span class="tree-line">├── </span><Morphism: ${morphism.name}>`;
+                    
+                    morphism.items.forEach((item, index) => {
+                        const itemDiv = document.createElement('div');
+                        itemDiv.innerHTML = `<span class="tree-line">${
+                            index === morphism.items.length - 1 ? '└── ' : '├── '
+                        }</span>${item}`;
+                        morphismDiv.appendChild(itemDiv);
+                    });
+                    
+                    content.appendChild(morphismDiv);
+                });
+            }
+            
+            div.appendChild(header);
+            div.appendChild(content);
+            return div;
+        }
+
+        function toggleContent(element) {
+            element.classList.toggle('visible');
+        }
+
+        function showFloatingInfo(term) {
+            const info = document.getElementById('floating-info');
+            info.textContent = data.hawaiianTerms[term];
+            info.style.display = 'block';
+        }
+
+        function hideFloatingInfo() {
+            const info = document.getElementById('floating-info');
+            info.style.display = 'none';
+        }
+
+        function initializeDocument() {
+            const root = document.getElementById('root');
+            data.entities.forEach(entity => {
+                root.appendChild(createEntityElement(entity));
+            });
+
+            // Add Hawaiian term tooltips
+            document.querySelectorAll('.hawaiian-term').forEach(term => {
+                term.addEventListener('mouseenter', () => showFloatingInfo(term.dataset.term));
+                term.addEventListener('mouseleave', hideFloatingInfo);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', initializeDocument);
+    </script>
+</body>
+</html>
